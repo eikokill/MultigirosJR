@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>MultigirosJR</title>
+
+<style>
+:root {
+  --azul:#0b5ed7;
+  --fondo:#f1f5f9;
+}
+
+body {
+  font-family: Arial, sans-serif;
+  background: var(--fondo);
+  padding: 20px;
+}
+
+.box {
+  background: white;
+  max-width: 420px;
+  margin: auto;
+  padding: 20px;
+  border-radius: 12px;
+  box-shadow: 0 5px 18px rgba(0,0,0,.15);
+}
+
+.header {
+  text-align: center;
+  margin-bottom: 15px;
+}
+
+.header h2 {
+  margin: 0;
+  color: var(--azul);
+}
+
+.header p {
+  margin-top: 6px;
+  color: #555;
+}
+
+label {
+  font-weight: bold;
+  margin-top: 10px;
+  display: block;
+}
+
+input {
+  width: 100%;
+  padding: 9px;
+  margin-top: 5px;
+  font-size: 14px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+}
+
+button {
+  width: 100%;
+  padding: 11px;
+  margin-top: 12px;
+  background: var(--azul);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 15px;
+  cursor: pointer;
+}
+
+button:hover {
+  opacity: 0.95;
+}
+
+.result {
+  margin-top: 16px;
+  text-align: center;
+  font-size: 24px;
+  font-weight: bold;
+  color: var(--azul);
+}
+
+.msg {
+  text-align: center;
+  margin-top: 6px;
+  font-size: 14px;
+  color: #555;
+}
+
+.btn-gray {
+  background: #6c757d;
+  font-size: 12px;
+}
+
+.operador {
+  display: none;
+  margin-top: 14px;
+  padding-top: 10px;
+  border-top: 1px dashed #ccc;
+  font-size: 12px;
+  color: #333;
+  text-align: center;
+}
+</style>
+</head>
+
+<body>
+
+<div class="box">
+
+<div class="header">
+  <h2>💱 MultigirosJR</h2>
+  <p>🚀 Somos tu mejor opción para enviar dinero</p>
+</div>
+
+<label>🇺🇸 USD a COP</label>
+<input type="number" id="usdCop" value="3765">
+
+<label>🇺🇸 USD a Bs</label>
+<input type="number" id="usdVes" value="304">
+
+<label>🇨🇴 Monto en COP</label>
+<input type="number" id="cop" placeholder="Ej: 100000">
+
+<button onclick="calcular()">💰 Calcular envío</button>
+
+<div class="result" id="resultado"></div>
+<div class="msg">🇻🇪 Dinero que recibe tu familiar</div>
+
+<button onclick="enviarWhatsapp()">📲 Enviar comprobante por WhatsApp</button>
+
+<button class="btn-gray" onclick="pedirClave()">🔐 Modo operador</button>
+
+<div class="operador" id="panelOperador">
+  <b>📊 Datos internos</b><br><br>
+
+  Tasa base: <span id="tBase"></span><br>
+  Tasa con margen: <span id="tFinal"></span><br><br>
+
+  Ganancia operación:<br>
+  • <span id="gananciaOpBs"></span> Bs<br>
+  • <span id="gananciaOpCop"></span> COP<br><br>
+
+  💼 <b>Ganancia acumulada del día</b><br>
+  • <span id="gananciaTotalBs"></span> Bs<br>
+  • <span id="gananciaTotalCop"></span> COP<br><br>
+
+  <button class="btn-gray" onclick="reiniciarGanancia()">
+    🧹 Reiniciar ganancia del día
+  </button>
+</div>
+
+</div>
+
+<script>
+const CLAVE_SECRETA = "2611"; // CAMBIA AQUÍ TU CLAVE
+let operadorActivo = false;
+let ultimaOperacion = null;
+
+function calcular() {
+  const usdCop = +document.getElementById("usdCop").value;
+  const usdVes = +document.getElementById("usdVes").value;
+  const cop = +document.getElementById("cop").value;
+
+  if (!usdCop || !usdVes || !cop) {
+    alert("Completa todos los campos");
+    return;
+  }
+
+  const margen = 0.08;
+  const tasaBase = usdVes / usdCop;
+  const tasaFinal = tasaBase * (1 + margen);
+
+  const ves = cop * tasaFinal;
+
+  const gananciaBs = cop * (tasaFinal - tasaBase);
+  const gananciaCop = gananciaBs / tasaBase;
+
+  document.getElementById("resultado").innerText =
+    ves.toFixed(2) + " Bs";
+
+  document.getElementById("tBase").innerText = tasaBase.toFixed(6);
+  document.getElementById("tFinal").innerText = tasaFinal.toFixed(6);
+
+  document.getElementById("gananciaOpBs").innerText =
+    gananciaBs.toFixed(2);
+  document.getElementById("gananciaOpCop").innerText =
+    gananciaCop.toFixed(0);
+
+  ultimaOperacion = {
+    cop,
+    ves: ves.toFixed(2),
+    gananciaBs,
+    gananciaCop
+  };
+}
+
+function enviarWhatsapp() {
+  if (!ultimaOperacion) {
+    alert("Primero realiza un cálculo");
+    return;
+  }
+
+  guardarGanancia(
+    ultimaOperacion.gananciaBs,
+    ultimaOperacion.gananciaCop
+  );
+  actualizarGananciaTotal();
+
+  const texto =
+`💱 MultigirosJR
+🚀 Somos tu mejor opción
+
+🇨🇴 Envías: ${ultimaOperacion.cop} COP
+🇻🇪 Recibe: ${ultimaOperacion.ves} Bs`;
+
+  window.open(
+    "https://wa.me/?text=" + encodeURIComponent(texto),
+    "_blank"
+  );
+}
+
+function pedirClave() {
+  const clave = prompt("Ingresa la clave de operador:");
+  if (clave === CLAVE_SECRETA) {
+    operadorActivo = !operadorActivo;
+    document.getElementById("panelOperador").style.display =
+      operadorActivo ? "block" : "none";
+    actualizarGananciaTotal();
+  } else {
+    alert("Clave incorrecta");
+  }
+}
+
+function guardarGanancia(bs, cop) {
+  let totalBs = parseFloat(localStorage.getItem("gananciaBs")) || 0;
+  let totalCop = parseFloat(localStorage.getItem("gananciaCop")) || 0;
+
+  totalBs += bs;
+  totalCop += cop;
+
+  localStorage.setItem("gananciaBs", totalBs);
+  localStorage.setItem("gananciaCop", totalCop);
+}
+
+function actualizarGananciaTotal() {
+  const totalBs =
+    parseFloat(localStorage.getItem("gananciaBs")) || 0;
+  const totalCop =
+    parseFloat(localStorage.getItem("gananciaCop")) || 0;
+
+  document.getElementById("gananciaTotalBs").innerText =
+    totalBs.toFixed(2);
+  document.getElementById("gananciaTotalCop").innerText =
+    totalCop.toFixed(0);
+}
+
+function reiniciarGanancia() {
+  if (confirm("¿Seguro que deseas borrar la ganancia del día?")) {
+    localStorage.removeItem("gananciaBs");
+    localStorage.removeItem("gananciaCop");
+    actualizarGananciaTotal();
+    alert("Ganancia del día reiniciada");
+  }
+}
+</script>
+
+</body>
+</html>
