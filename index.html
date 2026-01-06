@@ -53,10 +53,10 @@ input {
   width: 100%;
   padding: 9px;
   margin-top: 5px;
-  font-size: 16px; /* Mejor tamaño para móvil */
+  font-size: 16px;
   border-radius: 6px;
   border: 1px solid #ccc;
-  box-sizing: border-box; /* Evita que se salga del ancho */
+  box-sizing: border-box;
 }
 
 button {
@@ -101,14 +101,13 @@ button:hover {
 .operador {
   display: none;
   margin-top: 14px;
-  padding-top: 10px;
   border-top: 1px dashed #ccc;
   font-size: 13px;
   color: #333;
   text-align: center;
   background-color: #f8f9fa;
   border-radius: 8px;
-  padding-bottom: 10px;
+  padding: 10px;
 }
 </style>
 </head>
@@ -118,63 +117,66 @@ button:hover {
 <div class="box">
 
   <div class="header">
-    <h2>💱 MultigirosJR</h2>
-    <p>🚀 Somos tu mejor opción</p>
+    <h2>MultigirosJR</h2>
+    <p>Somos tu mejor opción</p>
   </div>
 
-  <label>🇺🇸 Precio Dólar en COP (Tu costo)</label>
+  <label>Precio Dólar en COP (Tu costo)</label>
   <input type="number" id="usdCop" value="3765">
 
-  <label>🇺🇸 Precio Dólar en Bs (Tu costo)</label>
+  <label>Precio Dólar en Bs (Tu costo)</label>
   <input type="number" id="usdVes" value="304">
 
-  <label>🇨🇴 Monto a Enviar (COP)</label>
+  <label>Monto a Enviar (COP)</label>
   <input type="number" id="cop" placeholder="Ej: 100000">
 
-  <button onclick="calcular()">💰 Calcular envío</button>
+  <button onclick="calcular()">Calcular envío</button>
 
   <div class="result" id="resultado">0,00 Bs</div>
-  <div class="msg">🇻🇪 Recibe el familiar</div>
+  <div class="msg">Recibe el familiar</div>
 
-  <button onclick="enviarWhatsapp()">📲 Enviar comprobante por WhatsApp</button>
+  <button onclick="enviarWhatsapp()">Enviar comprobante por WhatsApp</button>
 
-  <button class="btn-gray" onclick="pedirClave()">🔐 Modo Operador</button>
+  <button class="btn-gray" onclick="pedirClave()">Modo Operador</button>
 
   <div class="operador" id="panelOperador">
-    <h3>📊 Panel de Control</h3>
-    
-    <p>Tasa Real (Costo): <strong id="tBase">0</strong></p>
-    <p>Tasa Cliente (Venta): <strong id="tFinal" style="color:green">0</strong></p>
+    <h3>Panel de Control</h3>
+
+    <p>Tasa Real: <strong id="tBase">0</strong></p>
+    <p>Tasa Cliente: <strong id="tFinal" style="color:green">0</strong></p>
+
     <hr>
-    <p><b>Ganancia de esta operación:</b></p>
-    <div style="font-size: 16px; color: green; font-weight: bold;">
-        + <span id="gananciaCop">0</span> COP
+
+    <p><b>Ganancia de esta operación</b></p>
+    <div style="font-size:16px; color:green; font-weight:bold;">
+      + <span id="gananciaCop">0</span> COP
     </div>
-    <div style="font-size: 11px; color: #666;">
-        (Equivale a <span id="gananciaBs">0</span> Bs)
+    <div style="font-size:11px; color:#666;">
+      (<span id="gananciaBs">0</span> Bs)
     </div>
-    
+
     <hr>
-    <p>💼 <b>Acumulado del Día:</b></p>
-    <p>💰 <span id="totalCop">0</span> COP</p>
-    
+
+    <p><b>Acumulado del día</b></p>
+    <p><span id="totalCop">0</span> COP</p>
+
     <button class="btn-gray" style="background:#dc3545;" onclick="reiniciarGanancia()">
-      🧹 Borrar acumulado
+      Borrar acumulado
     </button>
   </div>
 
 </div>
 
 <script>
-// --- CONFIGURACIÓN ---
+// CONFIGURACIÓN
 const CLAVE = "2611";
-const MARGEN = 0.05; // 5% de ganancia para ti
-// ---------------------
+const MARGEN = 0.05;
 
+// VARIABLES
 let ultimaOperacion = null;
-let guardado = false; // Para evitar guardar doble si dan click dos veces
+let guardado = false;
 
-// Referencias a elementos
+// ELEMENTOS
 const usdCopInput = document.getElementById("usdCop");
 const usdVesInput = document.getElementById("usdVes");
 const copInput = document.getElementById("cop");
@@ -186,7 +188,6 @@ const gananciaCopSpan = document.getElementById("gananciaCop");
 const totalCopSpan = document.getElementById("totalCop");
 const panelOperador = document.getElementById("panelOperador");
 
-// Cargar totales al iniciar
 actualizarTotales();
 
 function calcular() {
@@ -195,41 +196,38 @@ function calcular() {
   const cop = parseFloat(copInput.value);
 
   if (!usdCop || !usdVes || !cop) {
-    alert("Por favor completa todos los campos numéricos.");
+    alert("Completa todos los campos.");
     return;
   }
 
-  // 1. Tasa Real (Punto de equilibrio)
-  const tasaBase = usdVes / usdCop;
+  // 1. Tasa real (COP / Bs)
+  const tasaBase = usdCop / usdVes;
 
-  // 2. Tasa Cliente (CORREGIDO: RESTAMOS EL MARGEN PARA GANAR)
-  const tasaCliente = tasaBase * (1 - MARGEN);
+  // 2. Tasa cliente (+5%)
+  const tasaCliente = tasaBase * (1 + MARGEN);
 
-  // 3. Resultados
-  const ves = cop * tasaCliente;
+  // 3. Resultado final
+  const ves = cop / tasaCliente;
 
-  // 4. Tu Ganancia
-  // Si te dan 100.000 y el margen es 5%, te ganas el 5% de esos pesos.
-  const gananciaCop = cop * MARGEN;
-  const gananciaBs = gananciaCop * tasaBase; // Referencia en Bs
+  // 4. Ganancia real
+  const copReal = ves * tasaBase;
+  const gananciaCop = copReal - cop;
+  const gananciaBs = ves * (tasaCliente - tasaBase);
 
-  // Mostrar en pantalla con formato bonito (Miles separados por punto)
-  resultado.innerText = ves.toLocaleString('es-VE', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + " Bs";
+  resultado.innerText =
+    ves.toLocaleString('es-VE', { minimumFractionDigits: 2 }) + " Bs";
 
-  // Datos internos
   tBase.innerText = tasaBase.toFixed(6);
   tFinal.innerText = tasaCliente.toFixed(6);
-  
-  gananciaBsSpan.innerText = gananciaBs.toLocaleString('es-VE', {minimumFractionDigits: 2});
-  gananciaCopSpan.innerText = Math.round(gananciaCop).toLocaleString('es-CO');
 
-  // Guardar datos temporalmente por si se envía a WhatsApp
-  ultimaOperacion = { 
-      cop: cop, 
-      ves: ves, 
-      gananciaCop: gananciaCop 
-  };
-  guardado = false; // Reiniciamos el estado de guardado
+  gananciaCopSpan.innerText =
+    Math.round(gananciaCop).toLocaleString('es-CO');
+
+  gananciaBsSpan.innerText =
+    gananciaBs.toLocaleString('es-VE', { minimumFractionDigits: 2 });
+
+  ultimaOperacion = { cop, ves, gananciaCop };
+  guardado = false;
 }
 
 function enviarWhatsapp() {
@@ -238,36 +236,25 @@ function enviarWhatsapp() {
     return;
   }
 
-  // Guardar ganancia si no se ha guardado ya esta operación
   if (!guardado) {
-      guardarGanancia(ultimaOperacion.gananciaCop);
-      actualizarTotales();
-      guardado = true;
+    guardarGanancia(ultimaOperacion.gananciaCop);
+    actualizarTotales();
+    guardado = true;
   }
 
-  // Formato de moneda para el mensaje
-  const copFormato = ultimaOperacion.cop.toLocaleString('es-CO');
-  const vesFormato = ultimaOperacion.ves.toLocaleString('es-VE', {minimumFractionDigits: 2, maximumFractionDigits: 2});
-
-  const texto = 
-`💱 *MultigirosJR*
-🚀 Somos tu mejor opción
-
-🇨🇴 Envías: $${copFormato} COP
-🇻🇪 Reciben: ${vesFormato} Bs`;
+  const texto =
+`MultigirosJR
+Envías: ${ultimaOperacion.cop.toLocaleString('es-CO')} COP
+Reciben: ${ultimaOperacion.ves.toLocaleString('es-VE', {minimumFractionDigits:2})} Bs`;
 
   window.open("https://wa.me/?text=" + encodeURIComponent(texto), "_blank");
 }
 
 function pedirClave() {
-  const c = prompt("Ingresa clave de operador:");
+  const c = prompt("Clave operador:");
   if (c === CLAVE) {
-    // Alternar visibilidad
-    if (panelOperador.style.display === "block") {
-        panelOperador.style.display = "none";
-    } else {
-        panelOperador.style.display = "block";
-    }
+    panelOperador.style.display =
+      panelOperador.style.display === "block" ? "none" : "block";
   } else {
     alert("Clave incorrecta");
   }
@@ -284,7 +271,7 @@ function actualizarTotales() {
 }
 
 function reiniciarGanancia() {
-  if (confirm("¿Estás seguro de borrar las ganancias acumuladas hoy?")) {
+  if (confirm("¿Borrar acumulado?")) {
     localStorage.removeItem("gCop");
     actualizarTotales();
   }
